@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as GL from './glass.js?v=3';
-import { TX, LANGS } from './tx.js?v=2';
+import { TX, LANGS } from './tx.js?v=3';
 
 const $ = id => document.getElementById(id);
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v) } catch (e) { return d } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) { } } };
@@ -130,7 +130,7 @@ function setColor(ci) { const c = new THREE.Color(COLS[ci % COLS.length]); liqMa
 function setGold(on) { glassMat.color.set(on ? 0xffd45a : 0xffffff); glassMat.opacity = on ? .42 : .17; fresMat.uniforms.c.value.set(on ? 0xffd97a : 0xcfe2ff); fresMat.uniforms.k.value = on ? 1.3 : .8; }
 function useGlass(g, meta) {
   if (CUR) { WORLD.remove(CUR.grp); CUR.grp.traverse(m => { if (m.geometry) m.geometry.dispose(); }); }
-  const M = buildGlassMesh(g); CUR = { g, meta, ...M }; WORLD.add(M.grp); setColor(g.spec.col || 0); setGold(false);
+  const M = buildGlassMesh(g); CUR = { g, meta, ...M }; WORLD.add(M.grp); setColor(MILK && mode !== 'maker' ? 11 : (g.spec.col || 0)); picPlace(-(g.maxR + GT + .12)); setGold(false);
   WORLD.position.y = -M.yb + .006; counter.position.y = 0; pool.position.set(0, .002, 0); blob.position.set(0, .004, 0); const fr = g.spec.stem > .02 ? (g.spec.foot || .38) : g.rAt(0) * .9; blob.scale.setScalar(fr * 1.5 + .15);
   clearLines(); return CUR;
 }
@@ -146,6 +146,19 @@ const shk = new THREE.Group(); WORLD.add(shk); {
   const band = new THREE.Mesh(new THREE.LatheGeometry([P(.2, -.34), P(.225, -.335), P(.225, -.31), P(.2, -.305)], 40), metalMat2); shk.add(band);
   const sh = new THREE.Mesh(new THREE.LatheGeometry([P(.2, -.305), P(.19, -.26), P(.13, -.17), P(.095, -.13), P(.095, -.12)], 40), metalMat); shk.add(sh);
   const cap = new THREE.Mesh(new THREE.LatheGeometry([P(.095, -.12), P(.1, -.115), P(.1, -.03), P(.085, -.005), P(.05, 0), P(.001, 0)], 32), metalMat2); shk.add(cap);
+}
+// 特別なコード：シェイカーの代わりに、絵（フェルメール「牛乳を注ぐ女」）が注ぐ。絵の中の壺の口が原点にくる
+const shkBody = new THREE.Group(); while (shk.children.length) shkBody.add(shk.children[0]); shk.add(shkBody);
+const PIC_H = 1.5, PIC_W = PIC_H * 900 / 1009, PIC_U = .334, PIC_V = .584; // 壺の口の場所（絵の左から・上から）
+const pic = new THREE.Group(); pic.visible = false; shk.add(pic);
+const picMat = new THREE.MeshBasicMaterial({ color: 0x777777, toneMapped: false });
+{ const fr = new THREE.Mesh(new THREE.BoxGeometry(PIC_W + .1, PIC_H + .1, .04), new THREE.MeshStandardMaterial({ color: 0xb8893a, metalness: .9, roughness: .35 })); fr.position.z = -.03; pic.add(fr); const pl = new THREE.Mesh(new THREE.PlaneGeometry(PIC_W, PIC_H), picMat); pic.add(pl); }
+let MILK = !!ls.get('ff_milk', 0), picLoaded = false, picZ = -1;
+function picPlace(z) { picZ = z; pic.position.set((.5 - PIC_U) * PIC_W, (PIC_V - .5) * PIC_H, z); }
+function setMilk(on) {
+  MILK = !!on; ls.set('ff_milk', MILK ? 1 : 0); shkBody.visible = !MILK; pic.visible = MILK;
+  if (MILK && !picLoaded) { picLoaded = true; new THREE.TextureLoader().load('milk.jpg?v=1', tx => { tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; picMat.map = tx; picMat.color.set(0xffffff); picMat.needsUpdate = true; }, undefined, () => { picLoaded = false; }); }
+  if (CUR) { setColor(MILK && mode !== 'maker' ? 11 : (CUR.g.spec.col || 0)); picPlace(-(CUR.g.maxR + GT + .12)); if (mode === 'title' || mode === 'play') { frame(mode); camSnap = true; visual(P, 0); } }
 }
 // 注がれる筋
 const STN = 17, STS = 8; const stPos = new Float32Array(STN * STS * 3); const stGeo = new THREE.BufferGeometry(); stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3)); { const ix = []; for (let i = 0; i < STN - 1; i++)for (let j = 0; j < STS; j++) { const j2 = (j + 1) % STS; ix.push(i * STS + j, (i + 1) * STS + j, (i + 1) * STS + j2, i * STS + j, (i + 1) * STS + j2, i * STS + j2); } stGeo.setIndex(ix); }
@@ -186,9 +199,9 @@ let portrait = true, VW = 1, VH = 1;
 const camGoal = { p: new THREE.Vector3(0, 1, 8), l: new THREE.Vector3(0, 1, 0) }; let camSnap = true;
 function frame(kind) {
   if (!CUR) return; const g = CUR.g; const yb = 0, yt = -CUR.yb + g.H; let top = yt, xh = g.maxR + GT + .1, size = .74, cf = .5, cx = 0;
-  if (kind === 'play') { top = yt + 1.12; xh = Math.max(xh, .8); size = .76; cf = .52; }
+  if (kind === 'play') { top = yt + (MILK ? 1.62 : 1.12); xh = Math.max(xh, MILK ? 1.08 : .8); size = .76; cf = .52; }
   else if (kind === 'result') { xh += .55; if (portrait) { size = .3; cf = .2; } else { size = .7; cf = .5; cx = .22; } }
-  else if (kind === 'title') { top = yt + 1.12; xh = Math.max(xh, .8); size = portrait ? 1.0 : .8; cf = .5; }
+  else if (kind === 'title') { top = yt + (MILK ? 1.62 : 1.12); xh = Math.max(xh, MILK ? 1.08 : .8); size = portrait ? 1.0 : .8; cf = .5; }
   const V = top - yb; const tf = Math.tan(CAM.fov * Math.PI / 360); let visH = V / size; const needW = 2 * xh / .94; if (visH * CAM.aspect < needW) visH = needW / CAM.aspect;
   const d = visH / 2 / tf; const cy = (top + yb) / 2; const ly = cy - (.5 - cf) * visH; const lx = cx * visH * CAM.aspect;
   camGoal.l.set(lx, ly, 0); camGoal.p.set(lx, ly + d * .13, d * .991);
@@ -202,15 +215,15 @@ const TH0 = 1.66, TH1 = 2.45;
 function visual(Pp, dt) {
   const g = CUR.g, H = g.H; const tl = Pp ? Pp.tilt : 0; const a = sm(tl / GL.T0);
   let rimMin = 9; for (let j = 0; j < 24; j++)rimMin = Math.min(rimMin, g.rAt(1) * g.secR(j / 24 * 6.283, 1));
-  const px = clamp(rimMin * .3, .02, .14), py = H + .34; const rx = .5, ry = H + 1.04;
-  const th = a * TH0 + Math.max(0, tl - GL.T0) / (1 - GL.T0) * (TH1 - TH0);
-  shk.position.set(lerp(rx, px, a), lerp(ry, py, a), 0); shk.rotation.z = th;
+  const px = clamp(rimMin * .3, .02, .14), py = H + .34; const rx = MILK ? px : .5, ry = H + (MILK ? .72 : 1.04);
+  const u0 = Math.max(0, tl - GL.T0) / (1 - GL.T0); const th = MILK ? a * .1 + u0 * .5 : a * TH0 + u0 * (TH1 - TH0);
+  shk.position.set(lerp(rx, px, a), lerp(ry, py, a), 0); shk.rotation.z = th; const zs = MILK ? picZ : 0;
   const frac = Pp ? Math.min(1, Pp.landed) : 0; const level = g.levelOf(frac);
   let amp = 0; if (Pp) { const since = (Pp.tick - Pp.lastLand) / HZ; const e = clamp(1 - since, 0, 1); amp = .014 * e * (Pp.landFlow > 0 ? 1 : e) * Math.min(1, .35 + level * 2); }
   setLiquid(CUR, level, amp, TIME);
   // 筋
   const surf = level * H; let any = false;
-  if (Pp) { const n = Pp.em.length; for (let k = 0; k < STN; k++) { const q = n - 1 - k >= 0 ? Pp.em[n - 1 - k] : 0; const f = k / (STN - 1); const y = py - (py - surf) * f * f; const rr = q > 0 ? .008 + Math.sqrt(q / GL.QMAX) * .03 * (1 - .35 * f) : 0; if (rr > 0) any = true; const sx = px + Math.sin(TIME * 23 + k * .5) * .003; for (let j = 0; j < STS; j++) { const an = j / STS * 6.283; const o = (k * STS + j) * 3; stPos[o] = sx + Math.cos(an) * rr; stPos[o + 1] = y; stPos[o + 2] = Math.sin(an) * rr; } } }
+  if (Pp) { const n = Pp.em.length; for (let k = 0; k < STN; k++) { const q = n - 1 - k >= 0 ? Pp.em[n - 1 - k] : 0; const f = k / (STN - 1); const y = py - (py - surf) * f * f; const rr = q > 0 ? .008 + Math.sqrt(q / GL.QMAX) * .03 * (1 - .35 * f) : 0; if (rr > 0) any = true; const sx = px + Math.sin(TIME * 23 + k * .5) * .003; for (let j = 0; j < STS; j++) { const an = j / STS * 6.283; const o = (k * STS + j) * 3; stPos[o] = sx + Math.cos(an) * rr; stPos[o + 1] = y; stPos[o + 2] = zs * (1 - f) + Math.sin(an) * rr; } } }
   stream.visible = any; if (any) { stGeo.attributes.position.needsUpdate = true; stGeo.computeVertexNormals(); }
   return { px, py, surf, level };
 }
@@ -315,7 +328,7 @@ function applyLang() {
   $('dE').innerHTML = esc(t('dE')) + '<small>' + esc(t('dEs')) + '</small>'; $('dN').innerHTML = esc(t('dN')) + '<small>' + esc(t('dNs')) + '</small>'; $('dH').innerHTML = esc(t('dH')) + '<small>' + esc(t('dHs')) + '</small>';
   $('mkBtn').textContent = t('mk'); $('codeBtn').textContent = t('codeBtn'); $('rankBtn').textContent = t('rank');
   $('langs').innerHTML = ''; LANGS.forEach(([k, n]) => { const b = document.createElement('button'); b.textContent = n; b.className = k === lang ? 'on' : ''; b.onclick = () => { lang = k; ls.set('ff_lang', k); applyLang(); }; $('langs').appendChild(b); });
-  $('cpHead').textContent = t('cpHead'); $('cpGo').textContent = t('cpGo'); $('cpBack').textContent = t('back'); $('rankBack').textContent = t('back');
+  $('cpHead').textContent = t('cpHead'); $('cpMilk').textContent = t('milkBack'); $('cpGo').textContent = t('cpGo'); $('cpBack').textContent = t('back'); $('rankBack').textContent = t('back');
   $('vShare').textContent = t('vShare'); $('vSave').textContent = t('vSave'); $('vX').textContent = t('xpost'); $('vBack').textContent = t('back');
   $('mkTop').innerHTML = esc(t('mkTop')) + '<small>' + esc(t('mkTop2')) + '</small>'; [['mkLSec', 'mkLSec'], ['mkLAmp', 'mkLAmp'], ['mkLTw', 'mkLTw'], ['mkLSt', 'mkLSt'], ['mkLRim', 'mkLRim'], ['mkLWid', 'mkLWid'], ['mkLBot', 'mkLBot'], ['mkLHt', 'mkLHt']].forEach(([id, k]) => { $(id).textContent = t(k); }); $('mkName').placeholder = t('mkName'); $('mkBack').textContent = t('back'); $('mkClear').textContent = t('mkClear'); $('mkSave').textContent = t('mkSave'); if (MK && mode === 'maker') mkUI();
   $('mdHead').textContent = t('mdHead'); $('mdHow').textContent = t('mdHow'); $('mdPlay').textContent = t('mdPlay'); $('mdX').textContent = t('mdX'); $('mdCopy').textContent = t('mdCopy'); $('mdTop').textContent = t('top');
@@ -328,16 +341,18 @@ function showTitle() {
 }
 $('dE').onclick = () => startDiff('e'); $('dN').onclick = () => startDiff('n'); $('dH').onclick = () => startDiff('h');
 $('rankBtn').onclick = () => openRank('e', 'd', 'title');
-$('codeBtn').onclick = () => { show('codePanel'); $('cpMsg').textContent = ''; $('codeIn').value = ''; };
+$('codeBtn').onclick = () => { show('codePanel'); $('cpMsg').textContent = ''; $('codeIn').value = ''; $('cpMilk').hidden = !MILK; };
 $('cpBack').onclick = () => showTitle();
 const normCode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/O/g, '0').replace(/I/g, '1').slice(0, 8);
 async function goCode(code, silent) {
-  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); const msg = $('cpMsg'); if (code.length !== 8) { if (!silent) { msg.className = 'note err'; msg.textContent = t('cpNone'); } return false; }
+  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); const msg = $('cpMsg');
+  if (code === 'NATH' && !silent) { setMilk(!MILK); sClink(); msg.className = 'note ok'; msg.textContent = t(MILK ? 'milkOn' : 'milkOff'); $('codeIn').value = ''; $('cpMilk').hidden = !MILK; try { if (typeof gtag === 'function') gtag('event', 'special_code', { game: GAME, on: MILK ? 1 : 0 }); } catch (e) { } return false; } if (code.length !== 8) { if (!silent) { msg.className = 'note err'; msg.textContent = t('cpNone'); } return false; }
   msg.className = 'note'; msg.textContent = t('loading');
   try { const c = await loadCup(code); if (!c) { msg.className = 'note err'; msg.textContent = t('cpNone'); return false; } ac(); startCustom(code, c); return true; }
   catch (e) { msg.className = 'note err'; msg.textContent = t('neterr'); return false; }
 }
-$('cpGo').onclick = () => goCode($('codeIn').value);
+$('cpGo').onclick = () => { ac(); goCode($('codeIn').value); };
+$('cpMilk').onclick = () => { setMilk(false); $('cpMilk').hidden = true; $('cpMsg').className = 'note ok'; $('cpMsg').textContent = t('milkOff'); };
 
 // ===== 効果（紙ふぶき・ゆれ・線の名前） =====
 const FXC = $('fx'), fxg = FXC.getContext('2d'); let fxW = 0, fxH = 0;
@@ -652,9 +667,9 @@ if (OGP) {
 } else if (ICON) {
   R.setPixelRatio(1); R.setSize(512, 512, false); CAM.aspect = 1; CAM.updateProjectionMatrix(); const g = GL.glassNo(1); useGlass(g, { kind: 'n', no: 1, diff: 'e' }); setLiquid(CUR, g.h50, 0, 0); shk.visible = false; const yt = -CUR.yb + g.H; CAM.position.set(0, yt * .62, 5.2); CAM.lookAt(0, yt * .52, 0); R.render(SC, CAM); window.__ready = 1;
 } else {
-  resize(); showTitle(); requestAnimationFrame(loop);
+  resize(); if (MILK) setMilk(true); showTitle(); requestAnimationFrame(loop);
   const qc = QS.get('c'), qg = +QS.get('g');
   if (qc) { goCode(qc, true).then(ok => { if (!ok) { show('codePanel'); $('codeIn').value = qc; } }); }
   else if (qg >= 1 && qg <= 1000) { /* 共有されたグラスは、押してから始める（音を鳴らすため） */ const g = GL.glassNo(Math.floor(qg)); useGlass(g, { kind: 'n', no: Math.floor(qg), diff: GL.DIFF_OF(Math.floor(qg)) }); setLiquid(CUR, g.h50, 0, 0); const b = document.createElement('button'); b.className = 'huge'; b.textContent = t('gno', { n: no4(Math.floor(qg)) }) + ' ' + t('challenge'); b.onclick = () => { ac(); startNo(qg); }; $('tHow').after(b); }
 }
-window.__FF = { GL, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkUI(); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
+window.__FF = { GL, setMilk, get MILK() { return MILK }, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkUI(); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };

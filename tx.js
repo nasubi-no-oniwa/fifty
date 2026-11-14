@@ -27,7 +27,7 @@ ja: {
  mkNeed: '先に、グラスの形をなぞってね', mkErr: '保存できませんでした。もう一度押してください', mkRim: 'ふちが細すぎたので、少し広げました', mkArea: 'ここをなぞる', mkTrace: '下から上へ',
  mdHead: 'グラスができました', mdHow: 'この合言葉を教えると、だれでもこのグラスに挑戦できます。', mdPlay: 'このグラスで遊ぶ', mdX: 'Xで出題する', mdCopy: '合言葉をコピー', copied: 'コピーしました',
  postMake: 'グラス「{name}」を作った\nこのグラスにぴったり50%注げる？\n合言葉 {code}',
- cpHead: '合言葉を入れてね', cpGo: 'このグラスに挑戦', cpNone: 'そのグラスは見つかりませんでした', neterr: '通信できませんでした', defName: '名無しのグラス',
+ cpHead: '合言葉か、特別なコードを入れてね', cpGo: '決定', milkOn: '特別なコード！ 「牛乳を注ぐ女」が注いでくれます', milkOff: 'ふつうのシェイカーに戻しました', milkBack: 'ふつうのシェイカーに戻す', cpNone: 'そのグラスは見つかりませんでした', neterr: '通信できませんでした', defName: '名無しのグラス',
  ogp2: 'ぴったり50%、注ぐだけ。', ogp3: 'グラスは1000種類。何%かは結果までわからない' },
 en: {
  hud: 'FIFTY', title: 'FIF<em>TY</em>', sub: 'Just pour exactly 50%.',
@@ -55,7 +55,7 @@ en: {
  mkNeed: 'Trace the glass shape first', mkErr: 'Could not save. Tap again', mkRim: 'The rim was too narrow, so it was widened a bit', mkArea: 'Trace here', mkTrace: 'bottom to top',
  mdHead: 'Your glass is ready', mdHow: 'Share this code and anyone can try your glass.', mdPlay: 'Play this glass', mdX: 'Challenge people on X', mdCopy: 'Copy the code', copied: 'Copied',
  postMake: 'I made a glass called "{name}"\nCan you pour exactly 50% into it?\nCode {code}',
- cpHead: 'Enter a code', cpGo: 'Try this glass', cpNone: 'That glass was not found', neterr: 'Connection failed', defName: 'Nameless Glass',
+ cpHead: 'Enter a glass code or a special code', cpGo: 'OK', milkOn: 'Special code! The Milkmaid will pour for you', milkOff: 'Back to the normal shaker', milkBack: 'Back to the normal shaker', cpNone: 'That glass was not found', neterr: 'Connection failed', defName: 'Nameless Glass',
  ogp2: 'Just pour exactly 50%.', ogp3: '1000 glasses. You won\'t know the % until the end' },
 zh: {
  hud: 'FIFTY', title: 'FIF<em>TY</em>', sub: '只要倒出剛好50%。',
@@ -83,7 +83,7 @@ zh: {
  mkNeed: '請先描出杯子的形狀', mkErr: '無法儲存，請再按一次', mkRim: '杯口太細，稍微加寬了', mkArea: '在這裡描', mkTrace: '由下往上',
  mdHead: '杯子做好了', mdHow: '把這個暗號告訴別人，誰都能挑戰這個杯子。', mdPlay: '用這個杯子玩', mdX: '在 X 上出題', mdCopy: '複製暗號', copied: '已複製',
  postMake: '我做了杯子「{name}」\n你能往裡面倒剛好50%嗎？\n暗號 {code}',
- cpHead: '請輸入暗號', cpGo: '挑戰這個杯子', cpNone: '找不到那個杯子', neterr: '連線失敗', defName: '無名杯',
+ cpHead: '請輸入暗號或特別代碼', cpGo: '確定', milkOn: '特別代碼！由「倒牛奶的女僕」來倒', milkOff: '已換回普通的雪克杯', milkBack: '換回普通的雪克杯', cpNone: '找不到那個杯子', neterr: '連線失敗', defName: '無名杯',
  ogp2: '只要倒出剛好50%。', ogp3: '杯子有1000種。幾%要到最後才知道' },
 ko: {
  hud: 'FIFTY', title: 'FIF<em>TY</em>', sub: '딱 50%만 따르면 된다.',
@@ -111,6 +111,6 @@ ko: {
  mkNeed: '먼저 글라스 모양을 그려 줘', mkErr: '저장하지 못했어요. 다시 눌러 주세요', mkRim: '입구가 너무 좁아서 조금 넓혔어요', mkArea: '여기를 그리기', mkTrace: '아래에서 위로',
  mdHead: '글라스가 완성됐어요', mdHow: '이 암호를 알려 주면 누구나 이 글라스에 도전할 수 있어요.', mdPlay: '이 글라스로 놀기', mdX: 'X에서 문제 내기', mdCopy: '암호 복사', copied: '복사했어요',
  postMake: '글라스「{name}」를 만들었다\n여기에 딱 50% 따를 수 있어?\n암호 {code}',
- cpHead: '암호를 입력해 줘', cpGo: '이 글라스에 도전', cpNone: '그 글라스를 찾을 수 없어요', neterr: '통신에 실패했어요', defName: '이름 없는 글라스',
+ cpHead: '암호나 특별 코드를 입력해 줘', cpGo: '확인', milkOn: '특별 코드! 「우유를 따르는 여인」이 따라 줍니다', milkOff: '보통 셰이커로 되돌렸어요', milkBack: '보통 셰이커로 되돌리기', cpNone: '그 글라스를 찾을 수 없어요', neterr: '통신에 실패했어요', defName: '이름 없는 글라스',
  ogp2: '딱 50%만 따르면 된다.', ogp3: '글라스는 1000종류. 몇 %인지는 끝까지 모른다' }
 };
