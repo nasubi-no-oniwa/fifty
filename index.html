@@ -36,6 +36,12 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family
 #decide{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:6;border:3px solid #1d1d1d;border-radius:16px;background:#ffd23a;color:#1d1d1d;font-family:inherit;font-weight:900;font-size:20px;padding:14px 34px;box-shadow:0 5px 0 #a87800;white-space:nowrap}
 #decide:active{transform:translateX(-50%) translateY(3px);box-shadow:0 2px 0 #a87800}
 #decide:disabled{opacity:.4}
+.vb{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);z-index:6;width:min(104px,calc(50vw - 100px));min-height:46px;border:2.5px solid #1d1d1d;border-radius:13px;background:#fffdf6;color:#1d1d1d;font-family:inherit;font-weight:900;font-size:12.5px;line-height:1.2;padding:5px 3px;box-shadow:0 4px 0 #0006;white-space:pre-line}
+.vb:active{transform:translateY(2px);box-shadow:0 2px 0 #0006}
+#viewBtn{right:calc(50% + 94px)}#homeBtn{left:calc(50% + 94px)}
+#viewBtn.on{background:#6c3fd0;color:#fff}
+#hint.view{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);font-size:16px}
+#hint.view small{font-size:12px}
 #big{position:fixed;left:0;right:0;top:22%;text-align:center;font-size:54px;font-weight:900;color:#fff;text-shadow:0 4px 0 #0008,0 0 16px #000a;z-index:8;pointer-events:none;line-height:1.15;padding:0 10px}
 #big.pop{animation:pop .45s ease-out}
 #big.spill{color:#ff6a5c}
@@ -177,6 +183,8 @@ if(document.body)go();else document.addEventListener('DOMContentLoaded',go);
 <div id="hud" hidden><div id="hudG"></div><div id="hudN"></div><div id="hudP"></div></div>
 <div id="hint" hidden></div>
 <button id="decide" hidden></button>
+<button id="viewBtn" class="vb" hidden></button>
+<button id="homeBtn" class="vb" hidden></button>
 <div id="big"></div>
 <div id="ogpT" hidden></div>
 
@@ -280,6 +288,6 @@ if(document.body)go();else document.addEventListener('DOMContentLoaded',go);
  </div>
 </div>
 
-<script type="module" src="main.js?v=5"></script>
+<script type="module" src="main.js?v=6"></script>
 </body>
 </html>

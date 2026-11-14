@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as GL from './glass.js?v=3';
-import { TX, LANGS } from './tx.js?v=3';
+import { TX, LANGS } from './tx.js?v=4';
 
 const $ = id => document.getElementById(id);
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v) } catch (e) { return d } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) { } } };
@@ -150,11 +150,11 @@ const shk = new THREE.Group(); WORLD.add(shk); {
 // 特別なコード：シェイカーの代わりに、絵（フェルメール「牛乳を注ぐ女」）が注ぐ。絵の中の壺の口が原点にくる
 const shkBody = new THREE.Group(); while (shk.children.length) shkBody.add(shk.children[0]); shk.add(shkBody);
 const PIC_H = 1.5, PIC_W = PIC_H * 900 / 1009, PIC_U = .334, PIC_V = .584; // 壺の口の場所（絵の左から・上から）
-const pic = new THREE.Group(); pic.visible = false; shk.add(pic);
+const picPivot = new THREE.Group(); shk.add(picPivot); const pic = new THREE.Group(); pic.visible = false; picPivot.add(pic); pic.position.set((.5 - PIC_U) * PIC_W, (PIC_V - .5) * PIC_H, 0);
 const picMat = new THREE.MeshBasicMaterial({ color: 0x777777, toneMapped: false });
 { const fr = new THREE.Mesh(new THREE.BoxGeometry(PIC_W + .1, PIC_H + .1, .04), new THREE.MeshStandardMaterial({ color: 0xb8893a, metalness: .9, roughness: .35 })); fr.position.z = -.03; pic.add(fr); const pl = new THREE.Mesh(new THREE.PlaneGeometry(PIC_W, PIC_H), picMat); pic.add(pl); }
 let MILK = !!ls.get('ff_milk', 0), picLoaded = false, picZ = -1;
-function picPlace(z) { picZ = z; pic.position.set((.5 - PIC_U) * PIC_W, (PIC_V - .5) * PIC_H, z); }
+function picPlace(z) { picZ = z; picPivot.position.set(0, 0, z); }
 function setMilk(on) {
   MILK = !!on; ls.set('ff_milk', MILK ? 1 : 0); shkBody.visible = !MILK; pic.visible = MILK;
   if (MILK && !picLoaded) { picLoaded = true; new THREE.TextureLoader().load('milk.jpg?v=1', tx => { tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; picMat.map = tx; picMat.color.set(0xffffff); picMat.needsUpdate = true; }, undefined, () => { picLoaded = false; }); }
@@ -191,6 +191,8 @@ const pressedAt = (log, i) => { for (const s of log) { if (s[0] <= i && i < s[1]
 
 // ===== 画面のうごき =====
 let mode = 'title', P = null, pressed = false, wantEnd = false, acc = 0, TIME = 0, spillT = -1, FIN = null, RUNST = null, replay = null, hintOff = false;
+// 見るモード：グラスのまわりを360度見回す（yaw）・上からのぞく（pitch）。止めた視点のまま注げる
+const VIEW = { on: false, yaw: 0, pitch: 0, drag: null, homing: false }, PMIN = -.1, PMAX = 1.25;
 const PANELS = ['title', 'result', 'vidPanel', 'rankPanel', 'codePanel', 'madePanel'];
 function show(id) { PANELS.forEach(p => $(p).hidden = (p !== id)); $('maker').hidden = id !== 'maker'; }
 function big(h, cls) { const b = $('big'); b.innerHTML = h || ''; b.className = cls || ''; if (h) { void b.offsetWidth; b.classList.add('pop'); } }
@@ -204,7 +206,7 @@ function frame(kind) {
   else if (kind === 'title') { top = yt + (MILK ? 1.62 : 1.12); xh = Math.max(xh, MILK ? 1.08 : .8); size = portrait ? 1.0 : .8; cf = .5; }
   const V = top - yb; const tf = Math.tan(CAM.fov * Math.PI / 360); let visH = V / size; const needW = 2 * xh / .94; if (visH * CAM.aspect < needW) visH = needW / CAM.aspect;
   const d = visH / 2 / tf; const cy = (top + yb) / 2; const ly = cy - (.5 - cf) * visH; const lx = cx * visH * CAM.aspect;
-  camGoal.l.set(lx, ly, 0); camGoal.p.set(lx, ly + d * .13, d * .991);
+  const el = .1304 + (kind === 'play' ? VIEW.pitch : 0); camGoal.l.set(lx, ly, 0); camGoal.p.set(lx, Math.max(.2, ly + d * Math.sin(el)), d * Math.cos(el));
 }
 function camStep(dt) { const k = camSnap ? 1 : Math.min(1, dt * 5); CAM.position.lerp(camGoal.p, k); CAM.userData.l = (CAM.userData.l || camGoal.l.clone()).lerp(camGoal.l, k); CAM.lookAt(CAM.userData.l); camSnap = false; }
 function resize() { if (OGP || ICON) return; VW = innerWidth; VH = innerHeight; portrait = VW < VH * 1.05; R.setSize(VW, VH, false); CAM.aspect = VW / VH; CAM.updateProjectionMatrix(); fxSize(); if (mode === 'maker') layoutMaker(); else frame(mode === 'result' ? 'result' : mode === 'title' ? 'title' : 'play'); }
@@ -234,12 +236,13 @@ const triedSet = () => new Set(ls.get('ff_tried', []));
 function markTried(gid) { const s = triedSet(); if (!s.has(gid)) { s.add(gid); ls.set('ff_tried', [...s].slice(-3000)); } }
 function startGlass(g, meta) {
   useGlass(g, meta); shk.visible = true; P = makePour(); pressed = false; wantEnd = false; acc = 0; spillT = -1; FIN = null; replay = null; hintOff = false; dropClear(); fxReset();
+  VIEW.on = false; VIEW.yaw = 0; VIEW.pitch = 0; VIEW.homing = false; VIEW.drag = null;
   mode = 'play'; show(null); big(''); camSnap = true; frame('play');
   const gid = gidOf(meta); const practice = triedSet().has(gid);
   RUNST = { gid, state: practice ? 'practice' : 'pending', st: 0 };
   if (!practice) { markTried(gid); const R0 = RUNST; netStart(gid).then(r => { if (RUNST !== R0) return; R0.state = r.state; R0.st = r.st || 0; hud(); }).catch(() => { if (RUNST === R0) { R0.state = 'off'; hud(); } }); }
   hud(); $('hud').hidden = false; $('hint').hidden = false; $('hint').style.opacity = 1; $('hint').innerHTML = esc(t('hint')) + '<small>' + esc(t('hint2')) + '</small>';
-  $('decide').hidden = false; $('decide').disabled = true; $('decide').textContent = t('decide');
+  $('decide').hidden = false; $('decide').disabled = true; $('decide').textContent = t('decide'); viewUI();
   try { if (typeof gtag === 'function') gtag('event', 'game_start', { game: GAME, diff: meta.diff || 'c' }); } catch (e) { }
 }
 function metaLabel(meta) { return meta.kind === 'c' ? t('gCustom') + '「' + meta.name + '」' : t('gno', { n: no4(meta.no) }) + '・' + diffName(meta.diff); }
@@ -251,13 +254,22 @@ function startDiff(d) { ac(); sTap(); startNo(pickNo(d)); }
 function startCustom(code, c) { const g = GL.build(GL.customSpec(c)); startGlass(g, { kind: 'c', code, name: String(c.n || t('defName')).slice(0, 12), cup: c }); }
 
 const cv = $('c');
-cv.addEventListener('pointerdown', e => { if (mode !== 'play') return; ac(); pressed = true; try { cv.setPointerCapture(e.pointerId); } catch (_) { } e.preventDefault(); });
-const up = () => { pressed = false; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); addEventListener('blur', up);
-addEventListener('keydown', e => { if (e.code === 'Space' && mode === 'play' && !e.repeat) { ac(); pressed = true; e.preventDefault(); } if (e.code === 'Enter' && mode === 'play' && !$('decide').disabled) $('decide').click(); });
+cv.addEventListener('pointerdown', e => { if (mode !== 'play') return; ac(); if (VIEW.on) { if (!wantEnd) { VIEW.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, yaw: VIEW.yaw, pitch: VIEW.pitch }; VIEW.homing = false; } } else pressed = true; try { cv.setPointerCapture(e.pointerId); } catch (_) { } e.preventDefault(); });
+cv.addEventListener('pointermove', e => { const d = VIEW.drag; if (!d || d.id !== e.pointerId || mode !== 'play') return; VIEW.yaw = d.yaw + (e.clientX - d.x) * .009; VIEW.pitch = clamp(d.pitch + (e.clientY - d.y) * .006, PMIN, PMAX); frame('play'); camSnap = true; });
+const up = () => { pressed = false; VIEW.drag = null; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); addEventListener('blur', up);
+addEventListener('keydown', e => { if (e.code === 'Space' && mode === 'play' && !e.repeat && !VIEW.on) { ac(); pressed = true; e.preventDefault(); } if (e.code === 'Enter' && mode === 'play' && !$('decide').disabled) $('decide').click(); });
 addEventListener('keyup', e => { if (e.code === 'Space') pressed = false; });
 addEventListener('contextmenu', e => e.preventDefault());
-$('decide').onclick = () => { if (mode === 'play' && P && P.emitted > 0 && !wantEnd) { wantEnd = true; pressed = false; sClink(); $('decide').disabled = true; $('hint').hidden = true; } else if (mode === 'replay') { endReplay(); } };
+$('decide').onclick = () => { if (mode === 'play' && P && P.emitted > 0 && !wantEnd) { wantEnd = true; pressed = false; VIEW.on = false; VIEW.drag = null; sClink(); $('decide').disabled = true; $('hint').hidden = true; } else if (mode === 'replay') { endReplay(); } };
 
+function viewUI() {
+  const b = $('viewBtn'); b.textContent = t(VIEW.on ? 'pourBtn' : 'viewBtn'); b.classList.toggle('on', VIEW.on); $('homeBtn').textContent = t('homeBtn');
+  if (mode !== 'play' || wantEnd) return; const h = $('hint');
+  if (VIEW.on) { h.className = 'view'; h.hidden = false; h.style.opacity = 1; h.innerHTML = esc(t('viewHint')) + '<small>' + esc(t('viewHint2')) + '</small>'; }
+  else { h.className = ''; h.innerHTML = esc(t('hint')) + '<small>' + esc(t('hint2')) + '</small>'; h.style.opacity = hintOff ? 0 : 1; }
+}
+$('viewBtn').onclick = () => { if (mode !== 'play' || wantEnd) return; ac(); sTap(); VIEW.on = !VIEW.on; pressed = false; VIEW.drag = null; viewUI(); };
+$('homeBtn').onclick = () => { if (mode !== 'play') return; sTap(); VIEW.yaw = Math.atan2(Math.sin(VIEW.yaw), Math.cos(VIEW.yaw)); VIEW.homing = true; VIEW.drag = null; };
 function playStep(dt) {
   const Pp = P; const rp = mode === 'replay'; let speed = 1;
   if (rp && replay) { const i = Pp.tick; const idle = Pp.tilt <= 0 && i > Pp.lastEmit + GL.FALL + 30 && i < replay.end && !pressedAt(replay.log, i + 40); if (idle) speed = 6; }
@@ -280,7 +292,7 @@ function playStep(dt) {
 
 // ===== 結果 =====
 function finish(spill) {
-  const Pp = P, g = CUR.g, meta = CUR.meta; pourSound(0, 0); if (Pp.seg >= 0) { Pp.log.push([Pp.seg, Pp.tick]); Pp.seg = -1; }
+  const Pp = P, g = CUR.g, meta = CUR.meta; pourSound(0, 0); VIEW.on = false; VIEW.pitch = 0; VIEW.homing = false; VIEW.drag = null; $('hint').className = ''; if (Pp.seg >= 0) { Pp.log.push([Pp.seg, Pp.tick]); Pp.seg = -1; }
   const total = Pp.emitted; const pct = total * 100; const dev = Math.abs(pct - 50);
   FIN = { g, meta, spill, total, pct, dev, log: Pp.log.slice(), end: Pp.end, dur: Math.round(Pp.end / HZ * 1000) / 1000, hy: g.levelOf(Math.min(1, total)) * 100, run: RUNST, perfect: !spill && dev < 0.005, sent: null };
   try { if (typeof gtag === 'function') gtag('event', 'game_end', { game: GAME, diff: meta.diff || 'c', spill: spill ? 1 : 0 }); } catch (e) { }
@@ -332,7 +344,7 @@ function applyLang() {
   $('vShare').textContent = t('vShare'); $('vSave').textContent = t('vSave'); $('vX').textContent = t('xpost'); $('vBack').textContent = t('back');
   $('mkTop').innerHTML = esc(t('mkTop')) + '<small>' + esc(t('mkTop2')) + '</small>'; [['mkLSec', 'mkLSec'], ['mkLAmp', 'mkLAmp'], ['mkLTw', 'mkLTw'], ['mkLSt', 'mkLSt'], ['mkLRim', 'mkLRim'], ['mkLWid', 'mkLWid'], ['mkLBot', 'mkLBot'], ['mkLHt', 'mkLHt']].forEach(([id, k]) => { $(id).textContent = t(k); }); $('mkName').placeholder = t('mkName'); $('mkBack').textContent = t('back'); $('mkClear').textContent = t('mkClear'); $('mkSave').textContent = t('mkSave'); if (MK && mode === 'maker') mkUI();
   $('mdHead').textContent = t('mdHead'); $('mdHow').textContent = t('mdHow'); $('mdPlay').textContent = t('mdPlay'); $('mdX').textContent = t('mdX'); $('mdCopy').textContent = t('mdCopy'); $('mdTop').textContent = t('top');
-  if (mode === 'result' && FIN) showResult(false); if (mode === 'play' || mode === 'replay') hud();
+  if (mode === 'result' && FIN) showResult(false); if (mode === 'play' || mode === 'replay') hud(); viewUI();
 }
 let titleNo = 1;
 function showTitle() {
@@ -550,6 +562,7 @@ $('rankBack').onclick = () => { if (RK.from === 'fin' && FIN) showResult(false);
 // ランキングの行を押すと、その人の注ぎ方を再生する
 async function startReplay(r) {
   let g, meta; if (RK.diff === 'c') { try { const c = await loadCup(RK.code); if (!c) return; g = GL.build(GL.customSpec(c)); meta = { kind: 'c', code: RK.code, name: String(c.n || '').slice(0, 12) }; } catch (e) { return; } } else { g = GL.glassNo(r.no); meta = { kind: 'n', no: r.no, diff: RK.diff }; }
+  VIEW.on = false; VIEW.yaw = 0; VIEW.pitch = 0; VIEW.homing = false; VIEW.drag = null;
   ac(); useGlass(g, meta); shk.visible = true; P = makePour(); replay = { log: r.L.log, end: r.L.end, row: r }; acc = 0; spillT = -1; dropClear(); fxReset(); mode = 'replay'; show(null); camSnap = true; frame('play'); big('');
   hud(); $('hudP').textContent = t('replay', { n: r.n }); $('hud').hidden = false; $('hint').hidden = true; $('decide').hidden = false; $('decide').disabled = false; $('decide').textContent = t('back');
 }
@@ -645,7 +658,10 @@ function frameStep(dt) {
   TIME += dt;
   for (const s of bokeh) s.material.opacity = s.userData.o * (.75 + .25 * Math.sin(TIME * s.userData.w + s.userData.p));
   if (mode === 'play' || mode === 'replay') { if (P) playStep(dt); }
-  if (CUR) { if (mode === 'title' || mode === 'made') CUR.grp.rotation.y += dt * .25; else if (mode === 'maker') CUR.grp.rotation.y += dt * 2.2; else CUR.grp.rotation.y = 0; }
+  if (VIEW.homing) { const k = Math.min(1, dt * 8); VIEW.yaw -= VIEW.yaw * k; VIEW.pitch -= VIEW.pitch * k; if (Math.abs(VIEW.yaw) < .003 && Math.abs(VIEW.pitch) < .003) { VIEW.yaw = VIEW.pitch = 0; VIEW.homing = false; } if (mode === 'play') { frame('play'); camSnap = true; } }
+  if (CUR) { if (mode === 'title' || mode === 'made') CUR.grp.rotation.y += dt * .25; else if (mode === 'maker') CUR.grp.rotation.y += dt * 2.2; else CUR.grp.rotation.y = (mode === 'play' || mode === 'result') ? VIEW.yaw : 0; lineGrp.rotation.y = (mode === 'play' || mode === 'result') ? VIEW.yaw : 0; }
+  { const vOn = mode === 'play' && !!P && !wantEnd && !P.spilled; if ($('viewBtn').hidden === vOn) $('viewBtn').hidden = !vOn; const hOn = vOn && (Math.abs(VIEW.yaw) > .01 || Math.abs(VIEW.pitch) > .01); if ($('homeBtn').hidden === hOn) $('homeBtn').hidden = !hOn;
+    if (mode === 'play' && P) shk.visible = !(VIEW.on && P.tilt <= 0); const vp = mode === 'play' ? VIEW.pitch : 0; picPivot.rotation.x = -vp * .9; pool.material.opacity = .34 * (1 - .75 * clamp(vp / PMAX, 0, 1)); }
   dropStep(dt); fxStep(dt);
   const cam = mode === 'maker' ? OCAM : CAM; camera = cam; if (cam === CAM) camStep(dt);
   const sh = FX.shake; cv.style.transform = sh > .01 ? 'translate(' + ((Math.random() - .5) * 12 * sh) + 'px,' + ((Math.random() - .5) * 12 * sh) + 'px)' : '';
@@ -672,4 +688,4 @@ if (OGP) {
   if (qc) { goCode(qc, true).then(ok => { if (!ok) { show('codePanel'); $('codeIn').value = qc; } }); }
   else if (qg >= 1 && qg <= 1000) { /* 共有されたグラスは、押してから始める（音を鳴らすため） */ const g = GL.glassNo(Math.floor(qg)); useGlass(g, { kind: 'n', no: Math.floor(qg), diff: GL.DIFF_OF(Math.floor(qg)) }); setLiquid(CUR, g.h50, 0, 0); const b = document.createElement('button'); b.className = 'huge'; b.textContent = t('gno', { n: no4(Math.floor(qg)) }) + ' ' + t('challenge'); b.onclick = () => { ac(); startNo(qg); }; $('tHow').after(b); }
 }
-window.__FF = { GL, setMilk, get MILK() { return MILK }, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkUI(); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
+window.__FF = { GL, get VIEW() { return VIEW }, view(v) { VIEW.on = !!v; viewUI(); }, setView(y, p) { VIEW.yaw = y; VIEW.pitch = p; frame('play'); camSnap = true; }, setMilk, get MILK() { return MILK }, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkUI(); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
