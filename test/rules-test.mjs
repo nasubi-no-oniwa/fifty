@@ -46,6 +46,8 @@ ex('合言葉の形がおかしい',await req('PUT',P+'cups/abc',U,cup(U)),false
 ex('半径が足りないグラス',await req('PUT',P+'cups/ABCDEFGJ',U,{...cup(U),r:[100,200]}),false);
 ex('半径が大きすぎるグラス',await req('PUT',P+'cups/ABCDEFGK',U,{...cup(U),r:Array.from({length:24},()=>5000)}),false);
 ex('作った人をいつわる',await req('PUT',P+'cups/ABCDEFGL',U,cup(U2)),false);
+ex('40点・上の型つきのグラスを作る',await req('PUT',P+'cups/ABCDEFGM',U,{...cup(U),s2:5,r:Array.from({length:40},(_,i)=>100+i*20)}),true);
+ex('41点のグラス',await req('PUT',P+'cups/ABCDEFGN',U,{...cup(U),r:Array.from({length:41},(_,i)=>100+i*20)}),false);
 ex('だれでもグラスを読める',await req('GET',P+'cups/ABCDEFGH',null),true);
 ex('自作グラスに挑戦',await req('PUT',P+'tried/'+U2+'/cABCDEFGH',U2,TS),true);
 ex('自作グラスの回を始める',await req('PUT',P+'run/'+U2,U2,{g:'cABCDEFGH',st:TS}),true);

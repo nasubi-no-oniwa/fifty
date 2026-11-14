@@ -1,8 +1,8 @@
 // フィフティー：中身の見えないシェイカーから、グラスにぴったり50%注ぐゲーム
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import * as GL from './glass.js?v=1';
-import { TX, LANGS } from './tx.js?v=1';
+import * as GL from './glass.js?v=2';
+import { TX, LANGS } from './tx.js?v=2';
 
 const $ = id => document.getElementById(id);
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v) } catch (e) { return d } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) { } } };
@@ -148,7 +148,7 @@ const shk = new THREE.Group(); WORLD.add(shk); {
   const cap = new THREE.Mesh(new THREE.LatheGeometry([P(.095, -.12), P(.1, -.115), P(.1, -.03), P(.085, -.005), P(.05, 0), P(.001, 0)], 32), metalMat2); shk.add(cap);
 }
 // 注がれる筋
-const STN = GL.FALL + 1, STS = 8; const stPos = new Float32Array(STN * STS * 3); const stGeo = new THREE.BufferGeometry(); stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3)); { const ix = []; for (let i = 0; i < STN - 1; i++)for (let j = 0; j < STS; j++) { const j2 = (j + 1) % STS; ix.push(i * STS + j, (i + 1) * STS + j, (i + 1) * STS + j2, i * STS + j, (i + 1) * STS + j2, i * STS + j2); } stGeo.setIndex(ix); }
+const STN = 17, STS = 8; const stPos = new Float32Array(STN * STS * 3); const stGeo = new THREE.BufferGeometry(); stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3)); { const ix = []; for (let i = 0; i < STN - 1; i++)for (let j = 0; j < STS; j++) { const j2 = (j + 1) % STS; ix.push(i * STS + j, (i + 1) * STS + j, (i + 1) * STS + j2, i * STS + j, (i + 1) * STS + j2, i * STS + j2); } stGeo.setIndex(ix); }
 const stream = new THREE.Mesh(stGeo, streamMat); stream.frustumCulled = false; stream.renderOrder = 1; WORLD.add(stream);
 // しぶき
 const DN = 220; const dPos = new Float32Array(DN * 3).fill(-99), dVel = new Float32Array(DN * 3), dLife = new Float32Array(DN); let dK = 0;
@@ -166,7 +166,7 @@ function makePour() {
       const i = this.tick; if (wantEnd && this.end < 0) this.end = i;
       const hold = pressed && this.end < 0 && this.log.length < 300;
       if (hold && this.seg < 0) this.seg = i; if (!hold && this.seg >= 0) { this.log.push([this.seg, i]); this.seg = -1; }
-      this.tilt = hold ? Math.min(1, this.tilt + GL.UPR) : Math.max(0, this.tilt - GL.DNR);
+      if (hold) this.tilt = Math.min(1, this.tilt + GL.UPR); else { if (this.tilt > GL.T0) this.tilt = GL.T0; this.tilt = Math.max(0, this.tilt - GL.DNR); }
       const q = GL.flowOf(this.tilt); this.em.push(q); this.emitted += q; if (q > 0) this.lastEmit = i;
       const a = i - GL.FALL; let land = 0; if (a >= 0) { land = this.em[a]; if (land > 0) { this.landed += land; this.lastLand = i; } }
       this.landFlow = land; this.tick = i + 1;
@@ -317,7 +317,7 @@ function applyLang() {
   $('langs').innerHTML = ''; LANGS.forEach(([k, n]) => { const b = document.createElement('button'); b.textContent = n; b.className = k === lang ? 'on' : ''; b.onclick = () => { lang = k; ls.set('ff_lang', k); applyLang(); }; $('langs').appendChild(b); });
   $('cpHead').textContent = t('cpHead'); $('cpGo').textContent = t('cpGo'); $('cpBack').textContent = t('back'); $('rankBack').textContent = t('back');
   $('vShare').textContent = t('vShare'); $('vSave').textContent = t('vSave'); $('vX').textContent = t('xpost'); $('vBack').textContent = t('back');
-  $('mkTop').innerHTML = esc(t('mkTop')) + '<small>' + esc(t('mkTop2')) + '</small>'; $('mkLSec').textContent = t('mkLSec'); $('mkLAmp').textContent = t('mkLAmp'); $('mkLTw').textContent = t('mkLTw'); $('mkLSt').textContent = t('mkLSt'); $('mkName').placeholder = t('mkName'); $('mkBack').textContent = t('back'); $('mkClear').textContent = t('mkClear'); $('mkSave').textContent = t('mkSave');
+  $('mkTop').innerHTML = esc(t('mkTop')) + '<small>' + esc(t('mkTop2')) + '</small>'; [['mkLSec', 'mkLSec'], ['mkLAmp', 'mkLAmp'], ['mkLTw', 'mkLTw'], ['mkLSt', 'mkLSt'], ['mkLRim', 'mkLRim'], ['mkLWid', 'mkLWid'], ['mkLBot', 'mkLBot'], ['mkLHt', 'mkLHt']].forEach(([id, k]) => { $(id).textContent = t(k); }); $('mkName').placeholder = t('mkName'); $('mkBack').textContent = t('back'); $('mkClear').textContent = t('mkClear'); $('mkSave').textContent = t('mkSave'); if (MK && mode === 'maker') mkUI();
   $('mdHead').textContent = t('mdHead'); $('mdHow').textContent = t('mdHow'); $('mdPlay').textContent = t('mdPlay'); $('mdX').textContent = t('mdX'); $('mdCopy').textContent = t('mdCopy'); $('mdTop').textContent = t('top');
   if (mode === 'result' && FIN) showResult(false); if (mode === 'play' || mode === 'replay') hud();
 }
@@ -544,57 +544,78 @@ function endReplay() { pourSound(0, 0); replay = null; P = null; clearLines(); s
 // ===== 自作グラス（ろくろ） =====
 const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => { let s = ''; const a = new Uint32Array(8); (window.crypto || { getRandomValues: x => { for (let i = 0; i < x.length; i++)x[i] = Math.random() * 4294967296; } }).getRandomValues(a); for (let i = 0; i < 8; i++)s += CODE_CH[a[i] % 32]; return s; };
-const cupOK = c => c && typeof c === 'object' && c.r && [...Array(GL.CUSTOM_N).keys()].every(i => typeof c.r[i] === 'number') && typeof c.h === 'number';
+const cupOK = c => c && typeof c === 'object' && Array.isArray(c.r) && c.r.length >= 24 && c.r.length <= 40 && c.r.every(x => typeof x === 'number') && typeof c.h === 'number';
 async function loadCup(code) { if (NONET) return ls.get('ff_cup_' + code, null); const r = await fetch(DB('cups/' + code) + QP()); if (!r.ok) throw new Error('cup'); const c = await r.json(); return cupOK(c) ? c : null; }
 async function saveCup(c) { if (NONET) { const code = newCode(); ls.set('ff_cup_' + code, c); return code; } const a = await fbAuth(); for (let i = 0; i < 4; i++) { const code = newCode(); const r = await PUT(DB('cups/' + code) + QA(a), { ...c, by: a.uid, at: TS }); if (r.ok) return code; if (r.status !== 401 && r.status !== 403) throw new Error('cup ' + r.status); } throw new Error('cup'); }
 const SEC_ICON = ['○', '☆', '□', '✿', '△', '⚙', '⬭', '💧'];
-let MK = null, mkL = null, mkStroke = null, mkDirty = false, mkLast = 0;
-const defCup = () => { const r = []; for (let i = 0; i < GL.CUSTOM_N; i++)r.push(Math.round(60 + 640 * i / (GL.CUSTOM_N - 1))); return { r, h: 95, s: 0, a: 30, t: 0, st: 50, c: Math.floor(Math.random() * 12), drawn: false }; };
+// MK：base はなぞった形（40個の半径）。つまみ（ふち・太さ・底）は、その上から倍率をかける
+let MK = null, mkL = null, mkStroke = null, mkSnap = null, mkPart = false, mkLast = 0, mkScope = 'all';
+const MKN = GL.CUSTOM_N;
+const defCup = () => { const base = []; for (let i = 0; i < MKN; i++)base.push(.06 + .64 * i / (MKN - 1)); return { base, h: .95, s: 0, s2: 0, a: 30, t: 0, st: 50, rim: 100, wid: 100, bot: 100, c: Math.floor(Math.random() * 12), drawn: false }; };
+const mkMod = i => { const y = i / (MKN - 1); return (MK.wid / 100) * (1 + (MK.rim / 100 - 1) * sm((y - .55) / .45)) * (1 + (MK.bot / 100 - 1) * sm((.45 - y) / .45)); };
+const mkR = i => clamp(MK.base[i] * mkMod(i), .045, 1);
+function mkCup() { const r = []; for (let i = 0; i < MKN; i++)r.push(Math.round(mkR(i) * 1000)); if (r[MKN - 1] < 150) { r[MKN - 1] = 150; if (r[MKN - 2] < 110) r[MKN - 2] = 110; } return { r, h: Math.round(clamp(MK.h, .3, 1.85) * 100), s: MK.s, s2: MK.s2, a: MK.a, t: MK.t, st: MK.st, c: MK.c }; }
+const MK_SL = [['mkRim', 'rim'], ['mkWid', 'wid'], ['mkBot', 'bot'], ['mkSt', 'st'], ['mkTw', 't'], ['mkAmp', 'a']];
 function openMaker() {
   ac(); sTap(); mode = 'maker'; show('maker'); $('hud').hidden = true; $('hint').hidden = true; $('decide').hidden = true; big(''); P = null; pourSound(0, 0); if (!MK) MK = defCup();
-  $('mkSecs').innerHTML = ''; SEC_ICON.forEach((ic, i) => { const b = document.createElement('button'); b.textContent = ic; b.className = i === MK.s ? 'on' : ''; b.onclick = () => { MK.s = i; mkUI(); mkRebuild(); }; $('mkSecs').appendChild(b); });
-  $('mkCols').innerHTML = ''; COLS.forEach((c, i) => { const b = document.createElement('button'); b.style.background = c; b.className = i === MK.c ? 'on' : ''; b.onclick = () => { MK.c = i; mkUI(); mkRebuild(); }; $('mkCols').appendChild(b); });
-  $('mkAmp').value = MK.a; $('mkTw').value = MK.t; $('mkSt').value = MK.st; $('mkMsg').textContent = ''; mkUI(); layoutMaker(); mkRebuild();
+  $('mkSecs').innerHTML = ''; SEC_ICON.forEach((ic, i) => { const b = document.createElement('button'); b.textContent = ic; b.onclick = () => { if (mkScope !== 'hi') MK.s = i; if (mkScope !== 'lo') MK.s2 = i; mkUI(); mkRebuild(); }; $('mkSecs').appendChild(b); });
+  $('mkCols').innerHTML = ''; COLS.forEach((c, i) => { const b = document.createElement('button'); b.style.background = c; b.onclick = () => { MK.c = i; mkUI(); mkRebuild(); }; $('mkCols').appendChild(b); });
+  $('mkScope').querySelectorAll('button').forEach(b => { b.onclick = () => { mkScope = b.dataset.s; mkUI(); }; });
+  $('mkMsg').textContent = ''; mkUI(); layoutMaker(); mkRebuild();
 }
-function mkUI() { [...$('mkSecs').children].forEach((b, i) => b.className = i === MK.s ? 'on' : ''); [...$('mkCols').children].forEach((b, i) => b.className = i === MK.c ? 'on' : ''); }
-$('mkAmp').oninput = e => { MK.a = +e.target.value; mkRebuild(); }; $('mkTw').oninput = e => { MK.t = +e.target.value; mkRebuild(); }; $('mkSt').oninput = e => { MK.st = +e.target.value; mkRebuild(); };
+function mkUI() {
+  const cur = mkScope === 'hi' ? MK.s2 : MK.s;[...$('mkSecs').children].forEach((b, i) => b.className = (mkScope === 'all' ? (i === MK.s && i === MK.s2) : i === cur) ? 'on' : (mkScope === 'all' && (i === MK.s || i === MK.s2)) ? 'half' : '');
+  [...$('mkCols').children].forEach((b, i) => b.className = i === MK.c ? 'on' : ''); $('mkScope').querySelectorAll('button').forEach(b => { b.className = b.dataset.s === mkScope ? 'on' : ''; b.textContent = t(b.dataset.s === 'all' ? 'scAll' : b.dataset.s === 'lo' ? 'scLo' : 'scHi'); });
+  MK_SL.forEach(([id, k]) => { $(id).value = MK[k]; }); $('mkHt').value = Math.round(MK.h * 100);
+}
+MK_SL.forEach(([id, k]) => { $(id).oninput = e => { MK[k] = +e.target.value; mkRebuild(); }; });
+$('mkHt').oninput = e => { MK.h = +e.target.value / 100; mkRebuild(); };
 function layoutMaker() {
-  const bar = $('mkBar').getBoundingClientRect(); const top = 54 + (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0); const W = innerWidth, Hs = innerHeight; const Ah = Math.max(160, bar.top - top - 6);
+  const bar = $('mkBar').getBoundingClientRect(); const top = 50; const W = innerWidth, Hs = innerHeight; const Ah = Math.max(150, bar.top - top - 6);
   const dc = $('mkDraw'); dc.style.left = '0px'; dc.style.top = top + 'px'; dc.style.width = W + 'px'; dc.style.height = Ah + 'px'; const d = Math.min(2, window.devicePixelRatio || 1); dc.width = W * d; dc.height = Ah * d;
-  const k = 1.95 / (Ah * .7); const axisX = W * .42, y0 = Ah * .74; mkL = { top, W, Hs, Ah, k, axisX, y0, d, maxR: Math.min(1, (W - axisX) * k - .03) };
+  const k = 1.95 / (Ah * .74); const axisX = W * .42, y0 = Ah * .78; mkL = { top, W, Hs, Ah, k, axisX, y0, d, maxR: Math.min(1, (W - axisX) * k - .03) };
   const py = top + y0; OCAM.left = -axisX * k; OCAM.right = (W - axisX) * k; OCAM.top = py * k; OCAM.bottom = -(Hs - py) * k; OCAM.updateProjectionMatrix(); OCAM.position.set(0, 0, 20); OCAM.lookAt(0, 0, 0); mkDraw();
 }
-function mkRebuild() { const g = GL.build(GL.customSpec(MK)); useGlass(g, { kind: 'c', code: '', name: '' }); WORLD.position.y = 0; counter.position.y = CUR.yb; pool.position.y = CUR.yb + .003; blob.position.y = CUR.yb + .004; setLiquid(CUR, g.h50, 0, 0); shk.visible = false; stream.visible = false; mkDraw(); }
+function mkRebuild() { const g = GL.build(GL.customSpec(mkCup())); const rot = CUR ? CUR.grp.rotation.y : 0; useGlass(g, { kind: 'c', code: '', name: '' }); CUR.grp.rotation.y = rot; WORLD.position.y = 0; counter.position.y = CUR.yb; pool.position.y = CUR.yb + .003; blob.position.y = CUR.yb + .004; setLiquid(CUR, g.h50, 0, 0); shk.visible = false; stream.visible = false; mkDraw(); }
 function mkDraw() {
-  if (!mkL) return; const L = mkL, c = $('mkDraw'), g2 = c.getContext('2d'); g2.setTransform(L.d, 0, 0, L.d, 0, 0); g2.clearRect(0, 0, L.W, L.Ah);
+  if (!mkL || !MK) return; const L = mkL, c = $('mkDraw'), g2 = c.getContext('2d'); g2.setTransform(L.d, 0, 0, L.d, 0, 0); g2.clearRect(0, 0, L.W, L.Ah);
   g2.fillStyle = 'rgba(255,255,255,.06)'; g2.fillRect(L.axisX, 0, L.W - L.axisX, L.y0);
   g2.strokeStyle = '#fff8'; g2.lineWidth = 1.5; g2.setLineDash([6, 6]); g2.beginPath(); g2.moveTo(L.axisX, 0); g2.lineTo(L.axisX, L.y0); g2.moveTo(L.axisX - 20, L.y0); g2.lineTo(L.W, L.y0); g2.stroke(); g2.setLineDash([]);
   g2.fillStyle = '#fffc'; g2.font = '900 12px ' + FF; g2.textAlign = 'right'; g2.fillText(t('mkArea'), L.W - 8, 16);
-  if (mkStroke && mkStroke.length > 1) { g2.strokeStyle = '#ffd23a'; g2.lineWidth = 4; g2.lineJoin = g2.lineCap = 'round'; g2.beginPath(); mkStroke.forEach((p, i) => i ? g2.lineTo(p[0], p[1]) : g2.moveTo(p[0], p[1])); g2.stroke(); }
-  else if (MK && !MK.drawn) { g2.strokeStyle = '#ffd23aaa'; g2.lineWidth = 3; g2.setLineDash([4, 7]); g2.beginPath(); const Hh = MK.h / 100; for (let i = 0; i < GL.CUSTOM_N; i++) { const x = L.axisX + MK.r[i] / 1000 / L.k, y = L.y0 - (i / (GL.CUSTOM_N - 1)) * Hh / L.k; i ? g2.lineTo(x, y) : g2.moveTo(x, y); } g2.stroke(); g2.setLineDash([]); g2.fillStyle = '#ffd23a'; g2.textAlign = 'left'; g2.font = '900 13px ' + FF; g2.fillText('↑ ' + t('mkTrace'), L.axisX + 12, L.y0 - 8); }
+  // いまの形の線（この線の一部を上からなぞると、そこだけ変わる）
+  const cup = mkCup(), Hh = cup.h / 100; g2.lineJoin = g2.lineCap = 'round'; g2.strokeStyle = MK.drawn ? '#ffd23a' : '#ffd23aaa'; g2.lineWidth = MK.drawn ? 2.5 : 3; if (!MK.drawn) g2.setLineDash([4, 7]);
+  g2.beginPath(); for (let i = 0; i < MKN; i++) { const x = L.axisX + cup.r[i] / 1000 / L.k, y = L.y0 - (i / (MKN - 1)) * Hh / L.k; i ? g2.lineTo(x, y) : g2.moveTo(x, y); } g2.stroke(); g2.setLineDash([]);
+  if (!MK.drawn) { g2.fillStyle = '#ffd23a'; g2.textAlign = 'left'; g2.font = '900 13px ' + FF; g2.fillText('↑ ' + t('mkTrace'), L.axisX + 12, L.y0 - 8); }
+  if (mkStroke && mkStroke.length > 1) { g2.strokeStyle = '#fff'; g2.lineWidth = 4; g2.beginPath(); mkStroke.forEach((p, i) => i ? g2.lineTo(p[0], p[1]) : g2.moveTo(p[0], p[1])); g2.stroke(); }
 }
 const mkc = $('mkDraw');
-mkc.addEventListener('pointerdown', e => { if (mode !== 'maker') return; const b = mkc.getBoundingClientRect(); mkStroke = [[e.clientX - b.left, e.clientY - b.top]]; try { mkc.setPointerCapture(e.pointerId); } catch (_) { } e.preventDefault(); });
+mkc.addEventListener('pointerdown', e => {
+  if (mode !== 'maker') return; const b = mkc.getBoundingClientRect(); const p = [e.clientX - b.left, e.clientY - b.top]; mkStroke = [p]; mkSnap = { base: MK.base.slice(), h: MK.h };
+  const yw = (mkL.y0 - p[1]) * mkL.k; mkPart = MK.drawn && yw > MK.h * .12; // 底より上から描きはじめたら「一部だけなぞり直し」
+  try { mkc.setPointerCapture(e.pointerId); } catch (_) { } e.preventDefault();
+});
 mkc.addEventListener('pointermove', e => { if (!mkStroke) return; const b = mkc.getBoundingClientRect(); const p = [e.clientX - b.left, e.clientY - b.top]; const q = mkStroke[mkStroke.length - 1]; if (Math.hypot(p[0] - q[0], p[1] - q[1]) < 2) return; mkStroke.push(p); mkFromStroke(false); mkDraw(); });
-const mkEnd = () => { if (!mkStroke) return; mkFromStroke(true); mkStroke = null; mkDraw(); }; mkc.addEventListener('pointerup', mkEnd); mkc.addEventListener('pointercancel', mkEnd);
-// なぞった線 → 24個の半径（下へもどった線は高さの順にならべ直す）
+const mkEnd = () => { if (!mkStroke) return; mkFromStroke(true); mkStroke = null; mkSnap = null; mkDraw(); }; mkc.addEventListener('pointerup', mkEnd); mkc.addEventListener('pointercancel', mkEnd);
+// なぞった線の、高さ yy のところの半径（下へもどった線は、いちばん外側をとる）
+function strokeR(s, yy, bin) { let mx = -1; for (const p of s) if (Math.abs(p[1] - yy) <= bin * .5) mx = Math.max(mx, p[0]); if (mx >= 0) return mx; let lo = s[0], hi = s[s.length - 1]; for (const p of s) { if (p[1] <= yy) lo = p; if (p[1] >= yy) { hi = p; break; } } const d = hi[1] - lo[1]; return d > 1e-6 ? lo[0] + (hi[0] - lo[0]) * (yy - lo[1]) / d : lo[0]; }
 function mkFromStroke(final) {
   const L = mkL; const pts = mkStroke.map(p => [clamp((p[0] - L.axisX) * L.k, .045, L.maxR), (L.y0 - p[1]) * L.k]).filter(p => p[1] > -.05); if (pts.length < 2) return;
-  let y0 = Infinity, y1 = -Infinity; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); } y0 = Math.max(0, y0); const Hh = y1 - y0; if (Hh < .12) return; const H2 = clamp(Hh, .3, 1.85);
-  const s = pts.slice().sort((a, b) => a[1] - b[1]); const N = GL.CUSTOM_N, bin = Hh / (N - 1); const r = [];
-  for (let i = 0; i < N; i++) { const yy = y0 + Hh * i / (N - 1); let mx = -1; for (const p of s) if (Math.abs(p[1] - yy) <= bin * .5) mx = Math.max(mx, p[0]); if (mx < 0) { let lo = s[0], hi = s[s.length - 1]; for (const p of s) { if (p[1] <= yy) lo = p; if (p[1] >= yy) { hi = p; break; } } const d = hi[1] - lo[1]; mx = d > 1e-6 ? lo[0] + (hi[0] - lo[0]) * (yy - lo[1]) / d : lo[0]; } r.push(Math.round(clamp(mx, .045, 1) * 1000)); }
-  let msg = ''; if (r[N - 1] < 150) { r[N - 1] = 150; if (r[N - 2] < 110) r[N - 2] = 110; msg = t('mkRim'); }
-  MK.r = r; MK.h = Math.round(H2 * 100); MK.drawn = true; if (final) $('mkMsg').textContent = msg;
+  let ya = Infinity, yb = -Infinity; for (const p of pts) { ya = Math.min(ya, p[1]); yb = Math.max(yb, p[1]); } ya = Math.max(0, ya); const s = pts.slice().sort((a, b) => a[1] - b[1]);
+  if (mkPart) { // 一部だけ：なぞった高さのところだけ、形を入れかえる
+    const Hh = mkSnap.h, bin = Hh / (MKN - 1); MK.base = mkSnap.base.slice(); for (let i = 0; i < MKN; i++) { const yy = i / (MKN - 1) * Hh; if (yy < ya - bin * .5 || yy > yb + bin * .5) continue; MK.base[i] = clamp(strokeR(s, clamp(yy, ya, yb), bin) / mkMod(i), .02, 2); }
+  } else { // 全部：なぞった線がそのままグラスになる（つまみは元にもどす）
+    const Hh = yb - ya; if (Hh < .12) return; MK.rim = MK.wid = MK.bot = 100; const bin = Hh / (MKN - 1); const base = []; for (let i = 0; i < MKN; i++)base.push(clamp(strokeR(s, ya + Hh * i / (MKN - 1), bin), .045, 1)); MK.base = base; MK.h = clamp(Hh, .3, 1.85); MK.drawn = true; if (final) mkUI();
+  }
   const now = performance.now(); if (final || now - mkLast > 60) { mkLast = now; mkRebuild(); }
 }
 $('mkBtn').onclick = openMaker;
 $('mkBack').onclick = () => { shk.visible = true; showTitle(); };
-$('mkClear').onclick = () => { const c = MK.c; MK = defCup(); MK.c = c; $('mkAmp').value = MK.a; $('mkTw').value = MK.t; $('mkSt').value = MK.st; $('mkMsg').textContent = ''; mkUI(); mkRebuild(); };
+$('mkClear').onclick = () => { const c = MK.c; MK = defCup(); MK.c = c; $('mkMsg').textContent = ''; mkUI(); mkRebuild(); };
 let MADE = null;
 $('mkSave').onclick = async () => {
   if (!MK.drawn) { $('mkMsg').textContent = t('mkNeed'); return; } const nm = ($('mkName').value.trim() || t('defName')).slice(0, 12); if (badName(nm)) { $('mkMsg').textContent = t('badname'); return; }
   $('mkSave').disabled = true; $('mkMsg').textContent = t('sending');
-  const c = { r: MK.r.slice(), h: MK.h, s: MK.s, a: MK.a, t: MK.t, st: MK.st, c: MK.c, n: nm };
+  const c = { ...mkCup(), n: nm };
   try { const code = await saveCup(c); MADE = { code, c }; shk.visible = true; show('madePanel'); mode = 'made'; camera = CAM; WORLD.position.y = -CUR.yb; counter.position.y = 0; pool.position.y = .003; blob.position.y = .004; frame('title'); camSnap = true; $('mdName').textContent = '「' + nm + '」'; $('mdCode').textContent = code; $('mkMsg').textContent = ''; try { if (typeof gtag === 'function') gtag('event', 'cup_made', { game: GAME }); } catch (e) { } }
   catch (e) { console.warn(e); $('mkMsg').textContent = t('mkErr'); } $('mkSave').disabled = false;
 };
@@ -636,4 +657,4 @@ if (OGP) {
   if (qc) { goCode(qc, true).then(ok => { if (!ok) { show('codePanel'); $('codeIn').value = qc; } }); }
   else if (qg >= 1 && qg <= 1000) { /* 共有されたグラスは、押してから始める（音を鳴らすため） */ const g = GL.glassNo(Math.floor(qg)); useGlass(g, { kind: 'n', no: Math.floor(qg), diff: GL.DIFF_OF(Math.floor(qg)) }); setLiquid(CUR, g.h50, 0, 0); const b = document.createElement('button'); b.className = 'huge'; b.textContent = t('gno', { n: no4(Math.floor(qg)) }) + ' ' + t('challenge'); b.onclick = () => { ac(); startNo(qg); }; $('tHow').after(b); }
 }
-window.__FF = { GL, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
+window.__FF = { GL, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkUI(); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };

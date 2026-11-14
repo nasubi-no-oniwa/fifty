@@ -99,16 +99,22 @@ table.rank tr{cursor:pointer}
 #mkTop{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:12;text-align:center;color:#fff;font-weight:900;font-size:15px;text-shadow:0 2px 0 #0008;pointer-events:none;padding:0 10px}
 #mkTop small{display:block;font-size:12px;opacity:.85}
 #mkBar{position:fixed;left:0;right:0;bottom:0;z-index:12;pointer-events:auto;background:#fffdf6;border-top:3px solid #1d1d1d;border-radius:16px 16px 0 0;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 8px)}
-#mkBar .lab{font-size:11px;font-weight:900;color:var(--sub);margin:4px 0 2px;text-align:left}
+#mkBar .lab{font-size:11px;font-weight:900;color:var(--sub);text-align:left}
+.mkrow{display:flex;align-items:center;gap:8px;margin:0 0 3px}
+#mkScope{display:flex;gap:4px}
+#mkScope button{border:1.5px solid #bbb;background:#fff;border-radius:8px;font-size:11px;font-weight:900;padding:3px 8px;font-family:inherit;color:#555}
+#mkScope button.on{background:#1d1d1d;border-color:#1d1d1d;color:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;margin-top:3px}
 #mkSecs{display:flex;gap:4px;overflow-x:auto}
-#mkSecs button{flex:none;width:40px;height:40px;border-radius:10px;border:2px solid #ccc;background:#fff;font-size:20px;padding:0;font-family:inherit}
+#mkSecs button{flex:none;width:38px;height:36px;border-radius:10px;border:2px solid #ccc;background:#fff;font-size:20px;padding:0;font-family:inherit}
 #mkSecs button.on{border-color:#1d1d1d;background:#ffe9a8}
+#mkSecs button.half{border-color:#b89b3a;background:#fff6d6}
 #mkCols{display:flex;gap:5px;margin-top:2px}
 #mkCols button{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #aaa;padding:0}
 #mkCols button.on{box-shadow:0 0 0 3px #1d1d1d}
-.sl{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;color:var(--sub)}
-.sl span{width:4.2em;text-align:left;flex:none}
-.sl input{flex:1}
+.sl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:900;color:var(--sub);height:26px}
+.sl span{width:4.4em;text-align:left;flex:none;white-space:nowrap;overflow:hidden}
+.sl input{flex:1;min-width:0;height:22px;margin:0}
 #mkBar .row button{margin-top:6px;padding:11px;border:none;border-radius:12px;font-size:15px;font-weight:900;font-family:inherit;color:#fff;background:var(--pur)}
 #mkBar .row button.sub{background:#ece7da;color:var(--ink)}
 #mkBar .row button.huge{background:#e0a100}
@@ -242,11 +248,17 @@ if(document.body)go();else document.addEventListener('DOMContentLoaded',go);
  <div id="mkTop"></div>
  <canvas id="mkDraw"></canvas>
  <div id="mkBar">
-  <div class="lab" id="mkLSec"></div>
+  <div class="mkrow"><span class="lab" id="mkLSec"></span><span id="mkScope"><button data-s="all"></button><button data-s="lo"></button><button data-s="hi"></button></span></div>
   <div id="mkSecs"></div>
-  <div class="sl"><span id="mkLAmp"></span><input type="range" id="mkAmp" min="5" max="45" value="30"></div>
-  <div class="sl"><span id="mkLTw"></span><input type="range" id="mkTw" min="-300" max="300" value="0"></div>
-  <div class="sl"><span id="mkLSt"></span><input type="range" id="mkSt" min="0" max="110" value="50"></div>
+  <div class="grid2">
+   <div class="sl"><span id="mkLRim"></span><input type="range" id="mkRim" min="30" max="220" value="100"></div>
+   <div class="sl"><span id="mkLWid"></span><input type="range" id="mkWid" min="50" max="170" value="100"></div>
+   <div class="sl"><span id="mkLBot"></span><input type="range" id="mkBot" min="30" max="220" value="100"></div>
+   <div class="sl"><span id="mkLHt"></span><input type="range" id="mkHt" min="30" max="185" value="95"></div>
+   <div class="sl"><span id="mkLSt"></span><input type="range" id="mkSt" min="0" max="110" value="50"></div>
+   <div class="sl"><span id="mkLTw"></span><input type="range" id="mkTw" min="-300" max="300" value="0"></div>
+   <div class="sl"><span id="mkLAmp"></span><input type="range" id="mkAmp" min="5" max="45" value="30"></div>
+  </div>
   <div id="mkCols"></div>
   <input id="mkName" maxlength="12" autocomplete="off">
   <div id="mkMsg"></div>
@@ -267,6 +279,6 @@ if(document.body)go();else document.addEventListener('DOMContentLoaded',go);
  </div>
 </div>
 
-<script type="module" src="main.js?v=2"></script>
+<script type="module" src="main.js?v=3"></script>
 </body>
 </html>

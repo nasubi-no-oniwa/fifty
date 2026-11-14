@@ -230,12 +230,13 @@ export function glassNo(n) {
 }
 
 // ---- 自作グラス ----
-// 保存する形：r は24個の半径（0〜1000の整数）、h は高さ（×100）、s は断面 [種類,強さ×100]、t はねじれ（×100）
-export const CUSTOM_N = 24;
+// 保存する形：r は40個の半径（45〜1000の整数。古いものは24個）、h は高さ（×100）、s は下の型、s2 は上の型、a は型の強さ（×100）、t はねじれ（×100）
+export const CUSTOM_N = 40;
 export function customSpec(c) {
-  const pts = [];
-  for (let i = 0; i < CUSTOM_N; i++) pts.push([i / (CUSTOM_N - 1), Math.max(45, c.r[i]) / 1000]);
-  return { pts, h: c.h / 100, stem: (c.st || 0) / 100, foot: 0.4, fam: 30, sec: [c.s || 0, (c.a == null ? 30 : c.a) / 100, c.s || 0, (c.a == null ? 30 : c.a) / 100], tw: (c.t || 0) / 100, col: c.c || 0, diff: 'c' };
+  const N = c.r.length, pts = [];
+  for (let i = 0; i < N; i++) pts.push([i / (N - 1), Math.max(45, c.r[i]) / 1000]);
+  const a = (c.a == null ? 30 : c.a) / 100, s1 = c.s || 0, s2 = c.s2 == null ? s1 : c.s2;
+  return { pts, h: c.h / 100, stem: (c.st || 0) / 100, foot: 0.4, fam: 30, sec: [s1, a, s2, a], tw: (c.t || 0) / 100, col: c.c || 0, diff: 'c' };
 }
 
 export function nameOf(g, li) {
@@ -251,9 +252,9 @@ export function nameOf(g, li) {
 export const HZ = 120;
 export const T0 = 0.22;      // ここまで傾けると出はじめる
 export const UPR = 0.55 / HZ; // 押しているあいだ1回ごとに傾く量
-export const DNR = 1.6 / HZ;  // 離したあと戻る量
-export const QMAX = 0.4 / HZ; // いちばん傾けたときの1回ごとの量（グラス1杯＝1）
-export const FALL = 36;       // 出てからグラスに届くまで（0.3秒）
+export const DNR = 0.5 / HZ;  // 離したあとシェイカーが戻る量（離した瞬間に、注ぐのは止まる）
+export const QMAX = 0.5 / HZ; // いちばん傾けたときの1回ごとの量（グラス1杯＝1）
+export const FALL = 0;        // 出たぶんはすぐグラスに入る（離したあとに水面は上がらない）
 export function flowOf(tilt) { if (tilt <= T0) return 0; const u = (tilt - T0) / (1 - T0); return QMAX * u * Math.sqrt(u); }
 // log：[[押した回, 離した回], ...]（回 = 1/120 秒）。end：決定した回
 export function totalOf(log, end) {
@@ -262,7 +263,7 @@ export function totalOf(log, end) {
     let hold = false;
     while (k < log.length && log[k][1] <= i) k++;
     if (k < log.length && log[k][0] <= i && i < log[k][1] && i < end) hold = true;
-    if (hold) tilt = Math.min(1, tilt + UPR); else tilt = Math.max(0, tilt - DNR);
+    if (hold) tilt = Math.min(1, tilt + UPR); else { if (tilt > T0) tilt = T0; tilt = Math.max(0, tilt - DNR); }
     v += flowOf(tilt);
     if (i >= end && tilt <= 0) break;
     if (v > 1.2) break;
