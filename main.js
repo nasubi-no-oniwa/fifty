@@ -1,7 +1,7 @@
 // フィフティー：中身の見えないシェイカーから、グラスにぴったり50%注ぐゲーム
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import * as GL from './glass.js?v=2';
+import * as GL from './glass.js?v=3';
 import { TX, LANGS } from './tx.js?v=2';
 
 const $ = id => document.getElementById(id);
@@ -166,7 +166,7 @@ function makePour() {
       const i = this.tick; if (wantEnd && this.end < 0) this.end = i;
       const hold = pressed && this.end < 0 && this.log.length < 300;
       if (hold && this.seg < 0) this.seg = i; if (!hold && this.seg >= 0) { this.log.push([this.seg, i]); this.seg = -1; }
-      if (hold) this.tilt = Math.min(1, this.tilt + GL.UPR); else { if (this.tilt > GL.T0) this.tilt = GL.T0; this.tilt = Math.max(0, this.tilt - GL.DNR); }
+      this.tilt = GL.nextTilt(this.tilt, hold);
       const q = GL.flowOf(this.tilt); this.em.push(q); this.emitted += q; if (q > 0) this.lastEmit = i;
       const a = i - GL.FALL; let land = 0; if (a >= 0) { land = this.em[a]; if (land > 0) { this.landed += land; this.lastLand = i; } }
       this.landFlow = land; this.tick = i + 1;

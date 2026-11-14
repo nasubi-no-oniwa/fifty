@@ -255,6 +255,8 @@ export const UPR = 0.55 / HZ; // 押しているあいだ1回ごとに傾く量
 export const DNR = 0.5 / HZ;  // 離したあとシェイカーが戻る量（離した瞬間に、注ぐのは止まる）
 export const QMAX = 0.5 / HZ; // いちばん傾けたときの1回ごとの量（グラス1杯＝1）
 export const FALL = 0;        // 出たぶんはすぐグラスに入る（離したあとに水面は上がらない）
+// 押しているあいだ：出はじめるまでは速く傾き（約0.2秒）、そこからはゆっくり傾く。離したら、その瞬間に注ぐのは止まる
+export function nextTilt(tilt, hold) { if (hold) return Math.min(1, tilt + (tilt < T0 ? UPR * 2.2 : UPR)); if (tilt > T0) tilt = T0; return Math.max(0, tilt - DNR); }
 export function flowOf(tilt) { if (tilt <= T0) return 0; const u = (tilt - T0) / (1 - T0); return QMAX * u * Math.sqrt(u); }
 // log：[[押した回, 離した回], ...]（回 = 1/120 秒）。end：決定した回
 export function totalOf(log, end) {
@@ -263,7 +265,7 @@ export function totalOf(log, end) {
     let hold = false;
     while (k < log.length && log[k][1] <= i) k++;
     if (k < log.length && log[k][0] <= i && i < log[k][1] && i < end) hold = true;
-    if (hold) tilt = Math.min(1, tilt + UPR); else { if (tilt > T0) tilt = T0; tilt = Math.max(0, tilt - DNR); }
+    tilt = nextTilt(tilt, hold);
     v += flowOf(tilt);
     if (i >= end && tilt <= 0) break;
     if (v > 1.2) break;
