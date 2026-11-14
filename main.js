@@ -605,8 +605,8 @@ $('mdTop').onclick = () => { MK = null; $('mkName').value = ''; showTitle(); };
 
 // ===== まわす =====
 let last = performance.now();
-function loop(now) {
-  requestAnimationFrame(loop); const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now; if (mode === 'video') return; TIME += dt;
+function frameStep(dt) {
+  TIME += dt;
   for (const s of bokeh) s.material.opacity = s.userData.o * (.75 + .25 * Math.sin(TIME * s.userData.w + s.userData.p));
   if (mode === 'play' || mode === 'replay') { if (P) playStep(dt); }
   if (CUR) { if (mode === 'title' || mode === 'made') CUR.grp.rotation.y += dt * .25; else if (mode === 'maker') CUR.grp.rotation.y += dt * 2.2; else CUR.grp.rotation.y = 0; }
@@ -615,6 +615,10 @@ function loop(now) {
   const sh = FX.shake; cv.style.transform = sh > .01 ? 'translate(' + ((Math.random() - .5) * 12 * sh) + 'px,' + ((Math.random() - .5) * 12 * sh) + 'px)' : '';
   R.render(SC, cam);
   fxg.clearRect(0, 0, fxW, fxH); if (mode === 'result' && !$('result').hidden || (mode === 'replay' && replay && replay.done)) drawLabels(fxg, fxW, fxH, 1, CAM); drawFX(fxg, fxW, fxH);
+}
+function loop(now) {
+  requestAnimationFrame(loop); const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now; if (mode === 'video') return; if (PV && PV.manual) return;
+  frameStep(dt);
 }
 
 // ===== はじめ =====
@@ -632,4 +636,4 @@ if (OGP) {
   if (qc) { goCode(qc, true).then(ok => { if (!ok) { show('codePanel'); $('codeIn').value = qc; } }); }
   else if (qg >= 1 && qg <= 1000) { /* 共有されたグラスは、押してから始める（音を鳴らすため） */ const g = GL.glassNo(Math.floor(qg)); useGlass(g, { kind: 'n', no: Math.floor(qg), diff: GL.DIFF_OF(Math.floor(qg)) }); setLiquid(CUR, g.h50, 0, 0); const b = document.createElement('button'); b.className = 'huge'; b.textContent = t('gno', { n: no4(Math.floor(qg)) }) + ' ' + t('challenge'); b.onclick = () => { ac(); startNo(qg); }; $('tHow').after(b); }
 }
-window.__FF = { GL, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
+window.__FF = { GL, tick: frameStep, frame, snap() { camSnap = true; }, get RUN() { return RUNST }, get RK() { return RK }, get MADE() { return MADE }, loadBoard, get mode() { return mode }, get P() { return P }, get FIN() { return FIN }, get CUR() { return CUR }, startNo, startDiff, startCustom, showTitle, openRank, openMaker, makeImage, makeVideo, press(v) { pressed = v; }, decide() { $('decide').click(); }, get MK() { return MK }, setMK(o) { Object.assign(MK, o); mkRebuild(); }, adv(n, pr) { for (let i = 0; i < n; i++) { P.step(pr, wantEnd); } visual(P, 0); if (P.emitted > 0) { $('hint').style.opacity = 0; $('decide').disabled = false; hintOff = true; } }, setTime(v) { TIME = v; }, finishNow(frac) { /* 確認用：決めた量を注いだことにする */ const Pp = P; let n = 0; while (Pp.emitted < frac && n < 100000) { Pp.step(true, false); n++; } wantEnd = true; } };
