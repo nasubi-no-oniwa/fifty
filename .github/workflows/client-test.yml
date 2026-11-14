@@ -1,0 +1,38 @@
+# ゲームを試し用のデータベースにつないで、通しで遊んでみる試験（本番のデータには触らない）
+name: ゲームの通しの試験
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'main.js'
+      - 'glass.js'
+      - 'tx.js'
+      - 'database.rules.fifty.json'
+      - 'test/client-test.py'
+      - '.github/workflows/client-test.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 道具を入れる
+        run: pip install playwright && python -m playwright install --with-deps chromium
+      - name: 試し用のルールを作る
+        run: |
+          node -e 'const fs=require("fs");fs.writeFileSync(process.env.RUNNER_TEMP+"/database.rules.json",JSON.stringify({rules:{".read":false,".write":false,fifty:JSON.parse(fs.readFileSync("database.rules.fifty.json","utf8")),xquote:{".read":true}}}))'
+          printf '{"database":{"rules":"database.rules.json"},"emulators":{"database":{"port":9000},"auth":{"port":9099}}}' > "$RUNNER_TEMP/firebase.json"
+      - name: 試す
+        working-directory: ${{ runner.temp }}
+        run: npx -y firebase-tools@latest emulators:exec --only database,auth --project ft-red "python $GITHUB_WORKSPACE/test/client-test.py"
